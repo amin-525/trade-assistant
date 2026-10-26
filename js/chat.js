@@ -1,10 +1,8 @@
-// چت‌بات: اگر API فعال باشد از /api/chat (هوش مصنوعی واقعی) استفاده می‌کند،
-// وگرنه با پاسخ‌های محلی بر اساس تحلیل اندیکاتورها کار می‌کند.
+// چت: موتور داخلی (همیشه فعال) + مدل زبانی محلی (اختیاری، بعد از فعال‌سازی)
 const Chat = (() => {
-  const API_URL = "/api/chat"; // بعد از دیپلوی روی Vercel فعال می‌شود
   const FREE_DAILY_LIMIT = 5;
   let history = [];
-
+  let useLLM = false;
   const log = document.getElementById("chatLog");
 
   function append(role, text) {
@@ -13,23 +11,7 @@ const Chat = (() => {
     div.textContent = text;
     log.appendChild(div);
     log.scrollTop = log.scrollHeight;
-  }
-
-  function localAnswer(question, a, symbol) {
-    const q = question.toLowerCase();
-    if (!a) return "هنوز داده بازار دریافت نشده است. چند لحظه دیگر دوباره بپرسید.";
-    if (q.includes("ریسک") || q.includes("حد ضرر") || q.includes("stop")) {
-      const stop = (a.price * 0.97).toFixed(2);
-      return `برای ${symbol} پیشنهاد آموزشی: حد ضرر حدود ۳٪ زیر قیمت (${stop}) و اندازه پوزیشن ۱ تا ۲٪ از سرمایه. سطح حمایت فعلی: ${a.support.toFixed(2)}.`;
-    }
-    if (q.includes("حمایت") || q.includes("مقاومت")) {
-      return `حمایت اخیر: ${a.support.toFixed(2)} | مقاومت اخیر: ${a.resistance.toFixed(2)}`;
-    }
-    return `تحلیل ${symbol} (${a.time}):\n` +
-      `قیمت: ${a.price.toFixed(2)} | تغییر ۲۴ ساعته: ${a.change24.toFixed(2)}%\n` +
-      a.reasons.map((r) => "• " + r).join("\n") +
-      `\n\nجمع‌بندی: ${a.verdict}\nحمایت: ${a.support.toFixed(2)} | مقاومت: ${a.resistance.toFixed(2)}\n` +
-      "این تحلیل آموزشی است و توصیه سرمایه‌گذاری نیست.";
+    return div;
   }
 
   function checkLimit() {
@@ -37,36 +19,50 @@ const Chat = (() => {
     if (!u) return { ok: false, msg: "برای استفاده از چت، ابتدا وارد حساب شوید." };
     if (u.plan === "pro") return { ok: true };
     const usedToday = u.day === Auth.today() ? u.msgsToday : 0;
-    if (usedToday >= FREE_DAILY_LIMIT) {
+    if (usedToday >= FREE_DAILY_LIMIT)
       return { ok: false, msg: `سقف ${FREE_DAILY_LIMIT} پیام رایگان امروز تمام شد. برای چت نامحدود اشتراک بگیرید.` };
-    }
     Auth.update({ msgsToday: usedToday + 1, day: Auth.today() });
     return { ok: true };
+  }
+
+  async function llmAnswer(text, ctx) {
+    const a = ctx.analysis;
+    const facts = a
+      ? `نماد: ${ctx.symbol}. قیمت: ${a.price}. RSI: ${a.rsi.toFixed(1)}. EMA20: ${a.ema20.toFixed(2)}. EMA50: ${a.ema50.toFixed(2)}. حمایت: ${a.support}. مقاومت: ${a.resistance}. جمع‌بندی موتور: ${a.verdict}. دلایل: ${a.reasons.join("؛ ")}.`
+      : "داده بازار در دسترس نیست.";
+    const system = `تو دستیار تحلیل بازار به فارسی هستی. کوتاه و دقیق جواب بده.
+هیچ‌وقت سود را تضمین نکن و همیشه مدیریت ریسک را یادآوری کن. در پایان بنویس: این توصیه سرمایه‌گذاری نیست.
+داده‌های لحظه‌ای: ${facts}`;
+    const msgs = [{ role: "system", content: system }, ...history.slice(-6), { role: "user", content: text }];
+    return LocalLLM.generate(msgs);
   }
 
   async function send(text, analysis, symbol) {
     const gate = checkLimit();
     if (!gate.ok) return append("bot", gate.msg);
-
     append("user", text);
     history.push({ role: "user", content: text });
 
+    const ctx = { analysis, symbol, binanceSymbol: symbol.replace("/", "") };
+    let reply;
     try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ messages: history.slice(-10), context: { symbol, analysis } }),
-      });
-      if (!res.ok) throw new Error("API unavailable");
-      const data = await res.json();
-      history.push({ role: "assistant", content: data.reply });
-      append("bot", data.reply);
+      if (useLLM) {
+        const thinking = append("bot", "در حال فکر کردن با مدل محلی...");
+        reply = await llmAnswer(text, ctx);
+        thinking.remove();
+      } else {
+        reply = await Engine.answer(text, ctx);
+      }
     } catch (e) {
-      const reply = localAnswer(text, analysis, symbol);
-      history.push({ role: "assistant", content: reply });
-      append("bot", reply);
+      reply = (await Engine.answer(text, ctx)) + `\n\n(مدل محلی در دسترس نبود: ${e.message})`;
     }
+    history.push({ role: "assistant", content: reply });
+    append("bot", reply);
   }
 
-  return { send, append };
+  function setLLM(on) {
+    useLLM = on;
+  }
+
+  return { send, append, setLLM, isLLM: () => useLLM };
 })();

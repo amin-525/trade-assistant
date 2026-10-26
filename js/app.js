@@ -96,6 +96,26 @@
     refreshAnalysis();
   });
   $("refreshAnalysis").onclick = refreshAnalysis;
+
+  $("llmToggle").onclick = async () => {
+    const btn = $("llmToggle");
+    const status = $("llmStatus");
+    if (Chat.isLLM()) {
+      Chat.setLLM(false);
+      btn.textContent = "فعال‌سازی مدل هوش مصنوعی محلی (بدون API)";
+      status.textContent = "حالت: موتور داخلی";
+      return;
+    }
+    status.textContent = "در حال دانلود مدل (فقط بار اول)...";
+    try {
+      await LocalLLM.load((p) => (status.textContent = `دانلود مدل: ${p}%`));
+      Chat.setLLM(true);
+      btn.textContent = "غیرفعال‌سازی مدل محلی";
+      status.textContent = "حالت: مدل هوش مصنوعی محلی فعال است";
+    } catch (e) {
+      status.textContent = "خطا در بارگذاری مدل: " + e.message + " (موتور داخلی فعال است)";
+    }
+  };
   $("subscribeBtn").onclick = () => Billing.upgradeDemo();
 
   renderAuth();
