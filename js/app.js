@@ -195,7 +195,14 @@
     const email = $("authEmail").value.trim();
     const pass = $("authPass").value;
     try {
-      if (mode === "register") await Auth.register(email, pass);
+      if (mode === "register") {
+        const r = await Auth.register(email, pass);
+        if (r && r.needsConfirm) {
+          $("authError").style.color = "var(--up)";
+          $("authError").textContent = "لینک تأیید به ایمیل شما ارسال شد. بعد از تأیید، وارد شوید.";
+          return;
+        }
+      }
       else await Auth.login(email, pass);
       $("authModal").classList.add("hidden");
       $("authError").textContent = "";
@@ -247,6 +254,7 @@
   };
 
   renderAuth();
+  Auth.init();
   loadSymbolLists().then(() => renderMarketList());
   loadSymbol("BTCUSDT", "spot");
   setInterval(refreshAnalysis, 30000);

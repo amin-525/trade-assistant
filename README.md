@@ -22,6 +22,15 @@ npx serve trade-assistant
 > برای چت هوش مصنوعی واقعی، پروژه را روی **Vercel** دیپلوی کنید (همین مخزن را وصل کنید)
 > و متغیر `ANTHROPIC_API_KEY` را در Settings → Environment Variables بگذارید.
 
+## راه‌اندازی ثبت‌نام واقعی (Supabase)
+1. در https://supabase.com یک پروژه بسازید.
+2. در **SQL Editor** محتوای `supabase/schema.sql` را اجرا کنید.
+3. در **Project Settings → API** مقدار `Project URL` و `anon public` key را کپی کنید و در `js/config.js` بگذارید.
+4. در **Authentication → Providers → Email** تنظیم کنید. برای تأیید ایمیل، گزینه Confirm email را روشن نگه دارید یا خاموش کنید.
+5. **Authentication → URL Configuration** را روی آدرس سایت GitHub Pages (`https://amin-525.github.io/trade-assistant/`) بگذارید.
+
+تغییر پلن به «حرفه‌ای» فقط باید از سرور انجام شود (مثلاً بعد از پرداخت موفق با service_role)، نه از مرورگر.
+
 ## قبل از عرضه عمومی (حتماً)
 - ثبت‌نام را به Supabase یا Firebase Auth منتقل کنید (فعلاً در مرورگر ذخیره می‌شود).
 - درگاه پرداخت واقعی (زرین‌پال، Stripe) را به‌جای `Billing.upgradeDemo` وصل کنید.
