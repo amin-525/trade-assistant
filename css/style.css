@@ -1,22 +1,25 @@
 /* ===== TradeMind — تم تمیز و مدرن ===== */
 :root {
-  --bg: #050814;
-  --bg-2: #0a1025;
-  --accent: #22d3ee;
-  --accent-2: #8b5cf6;
-  --accent-soft: rgba(34, 211, 238, 0.12);
-  --text: #e8eef9;
-  --muted: #8a94ab;
-  --up: #22c55e;
-  --down: #f43f5e;
-  --warn: #fbbf24;
-  --glass: rgba(255, 255, 255, 0.045);
-  --glass-strong: rgba(255, 255, 255, 0.075);
-  --border: rgba(255, 255, 255, 0.09);
+  --bg: #080e19;
+  --bg-2: #111b2c;
+  --panel: #111b2c;
+  --panel-2: #162238;
+  --line: #26364f;
+  --accent: #56e0bd;
+  --accent-2: #6aa8ff;
+  --accent-soft: rgba(86, 224, 189, 0.12);
+  --text: #eef4ff;
+  --muted: #9aabc4;
+  --up: #34d399;
+  --down: #fb7185;
+  --warn: #ffca72;
+  --glass: rgba(17, 27, 44, 0.85);
+  --glass-strong: rgba(22, 34, 56, 0.9);
+  --border: rgba(38, 54, 79, 0.9);
   --radius: 18px;
   --radius-sm: 12px;
   --shadow: 0 10px 40px rgba(0, 0, 0, 0.35);
-  --grad: linear-gradient(135deg, var(--accent), var(--accent-2));
+  --grad: linear-gradient(100deg, #56e0bd, #7ed9ff);
 }
 
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,8 +29,7 @@ html { scroll-behavior: smooth; }
 body {
   font-family: "Vazirmatn", Tahoma, system-ui, sans-serif;
   background:
-    radial-gradient(900px 500px at 85% -10%, rgba(139, 92, 246, 0.18), transparent 60%),
-    radial-gradient(800px 500px at -10% 20%, rgba(34, 211, 238, 0.12), transparent 60%),
+    radial-gradient(circle at 80% -10%, #18314b 0, transparent 40%),
     var(--bg);
   color: var(--text);
   line-height: 1.7;
@@ -135,7 +137,7 @@ select.input { cursor: pointer; }
 .stat small { color: var(--muted); font-weight: 500; }
 .verdict {
   grid-column: 1 / -1; text-align: center; font-size: 1.35rem; font-weight: 900; padding: 22px;
-  background: linear-gradient(135deg, rgba(34,211,238,0.08), rgba(139,92,246,0.08));
+  background: linear-gradient(135deg, rgba(86,224,189,0.08), rgba(106,168,255,0.08));
 }
 .up { color: var(--up); }
 .down { color: var(--down); }
@@ -156,8 +158,8 @@ select.input { cursor: pointer; }
   max-width: 82%; padding: 12px 16px; border-radius: 16px; line-height: 1.85;
   white-space: pre-wrap; font-size: 0.93rem; animation: fadeIn 0.25s ease;
 }
-.msg.user { align-self: flex-start; background: rgba(139, 92, 246, 0.2); border-top-left-radius: 6px; }
-.msg.bot { align-self: flex-end; background: rgba(34, 211, 238, 0.1); border: 1px solid rgba(34,211,238,0.15); border-top-right-radius: 6px; }
+.msg.user { align-self: flex-start; background: rgba(106, 168, 255, 0.18); border-top-left-radius: 6px; }
+.msg.bot { align-self: flex-end; background: rgba(86, 224, 189, 0.1); border: 1px solid rgba(86,224,189,0.18); border-top-right-radius: 6px; }
 .chat-form { display: flex; gap: 10px; }
 .chat-form .input { flex: 1; }
 @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
@@ -200,8 +202,8 @@ select.input { cursor: pointer; }
 .plan { padding: 28px; display: flex; flex-direction: column; gap: 14px; position: relative; }
 .plan h3 { font-size: 1.15rem; }
 .plan.featured {
-  border-color: rgba(34, 211, 238, 0.45);
-  box-shadow: 0 0 0 1px rgba(34,211,238,0.2), 0 20px 50px rgba(34, 211, 238, 0.12);
+  border-color: rgba(86, 224, 189, 0.45);
+  box-shadow: 0 0 0 1px rgba(86,224,189,0.2), 0 20px 50px rgba(86, 224, 189, 0.1);
 }
 .plan.featured::before {
   content: "پیشنهاد ویژه"; position: absolute; top: -12px; right: 22px;
