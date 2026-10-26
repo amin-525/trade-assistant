@@ -37,13 +37,13 @@ const Chat = (() => {
     return LocalLLM.generate(msgs);
   }
 
-  async function send(text, analysis, symbol) {
+  async function send(text, analysis, symbol, market = "spot") {
     const gate = checkLimit();
     if (!gate.ok) return append("bot", gate.msg);
     append("user", text);
     history.push({ role: "user", content: text });
 
-    const ctx = { analysis, symbol, binanceSymbol: symbol.replace("/", "") };
+    const ctx = { analysis, symbol, market, binanceSymbol: symbol.replace("/", "") };
     let reply;
     try {
       if (useLLM) {

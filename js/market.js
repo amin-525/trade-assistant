@@ -1,7 +1,13 @@
-// دریافت داده قیمت از Binance (عمومی و بدون کلید) و محاسبه اندیکاتورها
+// داده بازار از Binance: اسپات و فیوچر دائمی (USDT-M) بدون کلید
 const Market = (() => {
-  async function fetchCandles(symbol = "BTCUSDT", interval = "1h", limit = 300) {
-    const url = `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
+  const BASE = {
+    spot: "https://api.binance.com/api/v3",
+    futures: "https://fapi.binance.com/fapi/v1",
+  };
+  const EXCLUDE = /(UP|DOWN|BEAR|BULL)USDT$/;
+
+  async function fetchCandles(symbol, interval = "1h", limit = 300, market = "spot") {
+    const url = `${BASE[market]}/klines?symbol=${symbol}&interval=${interval}&limit=${limit}`;
     const res = await fetch(url);
     if (!res.ok) throw new Error("دریافت داده از Binance ناموفق بود");
     const rows = await res.json();
@@ -47,6 +53,18 @@ const Market = (() => {
     return { macd: line[last], signal: signal[last] };
   }
 
+  // ATR (میانگین دامنه واقعی) برای تعیین فاصله حد ضرر
+  function atr(candles, period = 14) {
+    const trs = [];
+    for (let i = 1; i < candles.length; i++) {
+      const c = candles[i], p = candles[i - 1];
+      trs.push(Math.max(c.high - c.low, Math.abs(c.high - p.close), Math.abs(c.low - p.close)));
+    }
+    let value = trs.slice(0, period).reduce((a, b) => a + b, 0) / period;
+    for (let i = period; i < trs.length; i++) value = (value * (period - 1) + trs[i]) / period;
+    return value;
+  }
+
   function analyze(candles) {
     const closes = candles.map((c) => c.close);
     const last = candles[candles.length - 1];
@@ -58,9 +76,9 @@ const Market = (() => {
     const recent = candles.slice(-50);
     const support = Math.min(...recent.map((c) => c.low));
     const resistance = Math.max(...recent.map((c) => c.high));
-    const change24 = ((price - closes[Math.max(0, closes.length - 25)]) / closes[Math.max(0, closes.length - 25)]) * 100;
+    const base = closes[Math.max(0, closes.length - 25)];
+    const change24 = ((price - base) / base) * 100;
 
-    // امتیازدهی ساده: هر شرط مثبت +1، منفی -1
     let score = 0;
     const reasons = [];
     if (price > e50) { score++; reasons.push("قیمت بالای EMA50 است (روند صعودی)"); }
@@ -78,33 +96,37 @@ const Market = (() => {
 
     return {
       price, ema20: e20, ema50: e50, rsi: r, macd: m.macd, macdSignal: m.signal,
-      support, resistance, change24, score, verdict, reasons,
+      support, resistance, change24, score, verdict, reasons, atr: atr(candles, 14),
       time: new Date(last.time).toLocaleString("fa-IR"),
     };
   }
 
-  // فهرست همه جفت‌های فعال USDT در بایننس (بدون توکن‌های اهرمی)
-  async function fetchSymbols() {
-    const res = await fetch("https://api.binance.com/api/v3/exchangeInfo");
+  // لیست نمادهای فعال USDT در بازار مشخص (spot | futures)
+  async function fetchSymbols(market = "spot") {
+    const res = await fetch(`${BASE[market]}/exchangeInfo`);
     if (!res.ok) throw new Error("دریافت فهرست ارزها ناموفق بود");
     const data = await res.json();
     return data.symbols
-      .filter((s) => s.status === "TRADING" && s.quoteAsset === "USDT" && !/(UP|DOWN|BEAR|BULL)USDT$/.test(s.symbol))
+      .filter((s) =>
+        s.status === "TRADING" &&
+        s.quoteAsset === "USDT" &&
+        (market === "spot" || s.contractType === "PERPETUAL") &&
+        !EXCLUDE.test(s.symbol))
       .map((s) => s.symbol)
       .sort();
   }
 
-  // پرحجم‌ترین ارزها در ۲۴ ساعت گذشته
-  async function fetchTopByVolume(n = 50) {
-    const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+  // پرحجم‌ترین نمادها در ۲۴ ساعت گذشته
+  async function fetchTopByVolume(n = 50, market = "spot") {
+    const res = await fetch(`${BASE[market]}/ticker/24hr`);
     if (!res.ok) throw new Error("دریافت آمار بازار ناموفق بود");
     const data = await res.json();
     return data
-      .filter((t) => t.symbol.endsWith("USDT") && !/(UP|DOWN|BEAR|BULL)USDT$/.test(t.symbol))
+      .filter((t) => t.symbol.endsWith("USDT") && !EXCLUDE.test(t.symbol))
       .sort((a, b) => +b.quoteVolume - +a.quoteVolume)
       .slice(0, n)
       .map((t) => ({ symbol: t.symbol, price: +t.lastPrice, change: +t.priceChangePercent, volume: +t.quoteVolume }));
   }
 
-  return { fetchCandles, analyze, ema, rsi, fetchSymbols, fetchTopByVolume };
+  return { fetchCandles, analyze, ema, rsi, atr, fetchSymbols, fetchTopByVolume };
 })();

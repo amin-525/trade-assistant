@@ -34,6 +34,10 @@
         <h2>نمودار زنده</h2>
         <input id="symbolInput" class="input" list="symbolList" value="BTCUSDT" placeholder="جستجوی ارز، مثلاً SOLUSDT" />
         <datalist id="symbolList"></datalist>
+        <select id="marketSelect" class="input">
+          <option value="spot">اسپات</option>
+          <option value="futures">فیوچرز دائمی</option>
+        </select>
         <select id="intervalSelect" class="input">
           <option value="15">15m</option>
           <option value="60" selected>1h</option>
@@ -59,6 +63,32 @@
         <button id="scanBtn" class="btn primary">اسکن کن</button>
       </div>
       <div id="scanResult" class="scan-table">برای تحلیل سریع همه ارزهای پرحجم، دکمه اسکن را بزنید. با کلیک روی هر ردیف، نمودار همان ارز باز می‌شود.</div>
+    </section>
+
+    <section id="markets" class="card glass">
+      <div class="toolbar">
+        <h2>لیست بازارها</h2>
+        <div class="tabs-inline">
+          <button class="btn mk-tab active" data-mk="spot">کریپتو اسپات</button>
+          <button class="btn mk-tab" data-mk="futures">فیوچرز دائمی</button>
+          <button class="btn mk-tab" data-mk="gold">طلا (توکن‌شده)</button>
+        </div>
+        <input id="marketSearch" class="input" placeholder="جستجوی نماد..." />
+      </div>
+      <div id="marketList" class="market-grid">در حال بارگذاری...</div>
+      <p class="muted">فعلاً کریپتو و طلای توکن‌شده (PAXG, XAUT) در دسترس هستند. فارکس و سهام نیازمند منبع داده جداگانه هستند.</p>
+    </section>
+
+    <section id="planner" class="card glass">
+      <h2>پیشنهاد پوزیشن</h2>
+      <div class="planner-form">
+        <select id="plMarket" class="input"><option value="spot">اسپات</option><option value="futures">فیوچرز</option></select>
+        <input id="plCapital" class="input" type="number" value="1000" min="1" placeholder="سرمایه" />
+        <input id="plRisk" class="input" type="number" value="1" min="0.1" step="0.1" placeholder="ریسک %" />
+        <input id="plLev" class="input" type="number" value="3" min="1" max="125" placeholder="لوریج" />
+        <button id="plBtn" class="btn primary">محاسبه پوزیشن</button>
+      </div>
+      <pre id="plOut" class="plan-out">ارز و بازار را انتخاب کنید و سرمایه و ریسک را وارد کنید.</pre>
     </section>
 
     <section id="chat" class="card glass">
