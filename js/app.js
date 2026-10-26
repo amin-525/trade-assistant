@@ -3,8 +3,10 @@
   let currentSymbol = "BTCUSDT";
   let currentInterval = "1h";
   let lastAnalysis = null;
+  let validSymbols = new Set();
 
   const $ = (id) => document.getElementById(id);
+  const tvIntervalToMarket = { "15": "15m", "60": "1h", "240": "4h", "D": "1d" };
 
   function renderAuth() {
     const u = Auth.current();
@@ -18,19 +20,19 @@
       $("openAuth").onclick = () => $("authModal").classList.remove("hidden");
     }
     $("chatLimit").textContent = u
-      ? (u.plan === "pro" ? "اشتراک فعال: چت نامحدود" : `پیام امروز: ${u.day === Auth.today() ? u.msgsToday : 0} از ${5}`)
+      ? (u.plan === "pro" ? "اشتراک فعال: چت نامحدود" : `پیام امروز: ${u.day === Auth.today() ? u.msgsToday : 0} از 5`)
       : "برای چت، وارد حساب شوید.";
   }
 
   function renderAnalysis(a) {
     const cls = a.score > 0 ? "up" : a.score < 0 ? "down" : "";
     $("analysisBox").innerHTML = `
-      <div class="stat"><span>قیمت</span><strong>${a.price.toFixed(2)}</strong></div>
+      <div class="stat"><span>قیمت</span><strong>${a.price}</strong></div>
       <div class="stat"><span>تغییر ۲۴ ساعته</span><strong class="${a.change24 >= 0 ? "up" : "down"}">${a.change24.toFixed(2)}%</strong></div>
       <div class="stat"><span>RSI (14)</span><strong>${a.rsi.toFixed(1)}</strong></div>
-      <div class="stat"><span>EMA20 / EMA50</span><strong>${a.ema20.toFixed(0)} / ${a.ema50.toFixed(0)}</strong></div>
-      <div class="stat"><span>حمایت</span><strong>${a.support.toFixed(2)}</strong></div>
-      <div class="stat"><span>مقاومت</span><strong>${a.resistance.toFixed(2)}</strong></div>
+      <div class="stat"><span>EMA20 / EMA50</span><strong>${a.ema20.toFixed(4)} / ${a.ema50.toFixed(4)}</strong></div>
+      <div class="stat"><span>حمایت</span><strong>${a.support}</strong></div>
+      <div class="stat"><span>مقاومت</span><strong>${a.resistance}</strong></div>
       <div class="stat verdict ${cls}">جمع‌بندی: ${a.verdict}<br/><small>امتیاز: ${a.score}</small></div>
       <div class="stat" style="grid-column:1/-1"><span>دلایل</span>${a.reasons.map((r) => "• " + r).join("<br/>")}</div>`;
   }
@@ -43,6 +45,72 @@
       $("analysisBox").textContent = "خطا در دریافت داده: " + e.message;
     }
   }
+
+  function loadSymbol(sym) {
+    currentSymbol = sym;
+    $("symbolInput").value = sym;
+    TVChart.load("BINANCE:" + sym, $("intervalSelect").value);
+    refreshAnalysis();
+  }
+
+  // فهرست همه ارزها
+  Market.fetchSymbols().then((list) => {
+    validSymbols = new Set(list);
+    $("symbolList").innerHTML = list.map((s) => `<option value="${s}"></option>`).join("");
+  }).catch(() => {});
+
+  $("symbolInput").addEventListener("change", (e) => {
+    const v = e.target.value.trim().toUpperCase();
+    if (validSymbols.size && !validSymbols.has(v)) {
+      $("analysisBox").textContent = `نماد «${v}» در بایننس با جفت USDT پیدا نشد.`;
+      return;
+    }
+    loadSymbol(v);
+  });
+
+  // اسکنر بازار
+  $("scanBtn").onclick = async () => {
+    const box = $("scanResult");
+    box.textContent = "در حال اسکن ۵۰ ارز پرحجم...";
+    try {
+      const top = await Market.fetchTopByVolume(50);
+      const rows = [];
+      let i = 0;
+      const worker = async () => {
+        while (i < top.length) {
+          const t = top[i++];
+          try {
+            const a = Market.analyze(await Market.fetchCandles(t.symbol, "1h", 200));
+            rows.push({ ...t, a });
+          } catch (e) { /* ارز بدون داده کافی نادیده گرفته می‌شود */ }
+        }
+      };
+      await Promise.all([1, 2, 3, 4, 5].map(worker));
+      rows.sort((x, y) => y.a.score - x.a.score);
+      box.innerHTML = `<table>
+        <thead><tr><th>نماد</th><th>قیمت</th><th>تغییر ۲۴س</th><th>RSI</th><th>جمع‌بندی</th><th>امتیاز</th></tr></thead>
+        <tbody>${rows.map((r) => `
+          <tr class="row" data-symbol="${r.symbol}">
+            <td>${r.symbol}</td>
+            <td>${r.price}</td>
+            <td class="${r.change >= 0 ? "up" : "down"}">${r.change.toFixed(2)}%</td>
+            <td>${r.a.rsi.toFixed(0)}</td>
+            <td>${r.a.verdict}</td>
+            <td class="${r.a.score > 0 ? "up" : r.a.score < 0 ? "down" : ""}">${r.a.score}</td>
+          </tr>`).join("")}
+        </tbody></table>
+        <p class="muted">بر اساس تحلیل ۱ ساعته. این فهرست توصیه خرید یا فروش نیست.</p>`;
+    } catch (e) {
+      box.textContent = "خطا در اسکن: " + e.message;
+    }
+  };
+  $("scanResult").addEventListener("click", (e) => {
+    const row = e.target.closest("tr.row");
+    if (row) {
+      loadSymbol(row.dataset.symbol);
+      $("dashboard").scrollIntoView({ behavior: "smooth" });
+    }
+  });
 
   // ثبت‌نام / ورود
   let mode = "login";
@@ -78,25 +146,18 @@
     $("chatInput").value = "";
     Chat.send(text, lastAnalysis, currentSymbol.replace("USDT", "/USDT")).then(renderAuth);
   });
-  if (!document.querySelector(".msg")) {
-    Chat.append("bot", "سلام! من دستیار TradeMind هستم. از وضعیت بازار بپرسید، مثلاً «تحلیل کن» یا «حد ضرر چقدر باشد؟»");
-  }
+  Chat.append("bot", "سلام! من دستیار TradeMind هستم. هر ارزی از بایننس را در بالا انتخاب کنید یا از اسکنر استفاده کنید. بعد بپرسید، مثلاً «تحلیل کامل» یا «سرمایه 1000 ریسک 2».");
 
-  // نمودار و نماد
-  const symbolMap = { "BINANCE:BTCUSDT": "BTCUSDT", "BINANCE:ETHUSDT": "ETHUSDT", "BINANCE:SOLUSDT": "SOLUSDT", "BINANCE:BNBUSDT": "BNBUSDT" };
-  const intervalMap = { "15": "15m", "60": "1h", "240": "4h", "D": "1d" };
-  $("symbolSelect").addEventListener("change", (e) => {
-    currentSymbol = symbolMap[e.target.value];
-    TVChart.load(e.target.value, $("intervalSelect").value);
-    refreshAnalysis();
-  });
+  // بازه زمانی نمودار
   $("intervalSelect").addEventListener("change", (e) => {
-    currentInterval = intervalMap[e.target.value];
-    TVChart.load($("symbolSelect").value, e.target.value);
+    currentInterval = tvIntervalToMarket[e.target.value];
+    TVChart.load("BINANCE:" + currentSymbol, e.target.value);
     refreshAnalysis();
   });
   $("refreshAnalysis").onclick = refreshAnalysis;
+  $("subscribeBtn").onclick = () => Billing.upgradeDemo();
 
+  // مدل محلی
   $("llmToggle").onclick = async () => {
     const btn = $("llmToggle");
     const status = $("llmStatus");
@@ -116,10 +177,8 @@
       status.textContent = "خطا در بارگذاری مدل: " + e.message + " (موتور داخلی فعال است)";
     }
   };
-  $("subscribeBtn").onclick = () => Billing.upgradeDemo();
 
   renderAuth();
-  TVChart.load("BINANCE:BTCUSDT", "60");
-  refreshAnalysis();
+  loadSymbol("BTCUSDT");
   setInterval(refreshAnalysis, 30000);
 })();

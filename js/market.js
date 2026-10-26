@@ -83,5 +83,28 @@ const Market = (() => {
     };
   }
 
-  return { fetchCandles, analyze, ema, rsi };
+  // فهرست همه جفت‌های فعال USDT در بایننس (بدون توکن‌های اهرمی)
+  async function fetchSymbols() {
+    const res = await fetch("https://api.binance.com/api/v3/exchangeInfo");
+    if (!res.ok) throw new Error("دریافت فهرست ارزها ناموفق بود");
+    const data = await res.json();
+    return data.symbols
+      .filter((s) => s.status === "TRADING" && s.quoteAsset === "USDT" && !/(UP|DOWN|BEAR|BULL)USDT$/.test(s.symbol))
+      .map((s) => s.symbol)
+      .sort();
+  }
+
+  // پرحجم‌ترین ارزها در ۲۴ ساعت گذشته
+  async function fetchTopByVolume(n = 50) {
+    const res = await fetch("https://api.binance.com/api/v3/ticker/24hr");
+    if (!res.ok) throw new Error("دریافت آمار بازار ناموفق بود");
+    const data = await res.json();
+    return data
+      .filter((t) => t.symbol.endsWith("USDT") && !/(UP|DOWN|BEAR|BULL)USDT$/.test(t.symbol))
+      .sort((a, b) => +b.quoteVolume - +a.quoteVolume)
+      .slice(0, n)
+      .map((t) => ({ symbol: t.symbol, price: +t.lastPrice, change: +t.priceChangePercent, volume: +t.quoteVolume }));
+  }
+
+  return { fetchCandles, analyze, ema, rsi, fetchSymbols, fetchTopByVolume };
 })();

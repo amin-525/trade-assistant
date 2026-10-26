@@ -32,12 +32,8 @@
     <section id="dashboard" class="card glass">
       <div class="toolbar">
         <h2>نمودار زنده</h2>
-        <select id="symbolSelect" class="input">
-          <option value="BINANCE:BTCUSDT">BTC/USDT</option>
-          <option value="BINANCE:ETHUSDT">ETH/USDT</option>
-          <option value="BINANCE:SOLUSDT">SOL/USDT</option>
-          <option value="BINANCE:BNBUSDT">BNB/USDT</option>
-        </select>
+        <input id="symbolInput" class="input" list="symbolList" value="BTCUSDT" placeholder="جستجوی ارز، مثلاً SOLUSDT" />
+        <datalist id="symbolList"></datalist>
         <select id="intervalSelect" class="input">
           <option value="15">15m</option>
           <option value="60" selected>1h</option>
@@ -55,6 +51,14 @@
       </div>
       <div id="analysisBox" class="analysis-grid">در حال دریافت داده...</div>
       <p class="disclaimer">این تحلیل صرفاً آموزشی است و توصیه سرمایه‌گذاری نیست. مدیریت ریسک با خودتان است.</p>
+    </section>
+
+    <section id="scanner" class="card glass">
+      <div class="toolbar">
+        <h2>اسکنر بازار (پرحجم‌ترین ارزها)</h2>
+        <button id="scanBtn" class="btn primary">اسکن کن</button>
+      </div>
+      <div id="scanResult" class="scan-table">برای تحلیل سریع همه ارزهای پرحجم، دکمه اسکن را بزنید. با کلیک روی هر ردیف، نمودار همان ارز باز می‌شود.</div>
     </section>
 
     <section id="chat" class="card glass">
